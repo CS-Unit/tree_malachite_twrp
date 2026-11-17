@@ -1,0 +1,87 @@
+name: Build TWRP for Malachite
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Maximize build disk space
+      uses: ulysseszh/disk-space-maximizer@v1
+      with:
+        root-reserve-mb: 1024
+        swap-size-mb: 14336
+        remove-dotnet: "true"
+        remove-android: "true"
+        remove-haskell: "true"
+        remove-codeql: "true"
+
+    - name: Set Git user info
+      run: |
+        git config --global user.name "CSXenon"
+        git config --global user.email "csxenon@users.noreply.github.com"
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          repo \
+          git \
+          g++-multilib \
+          lib32z1-dev \
+          libncurses5-dev \
+          libssl-dev \
+          libxml2-utils \
+          bison \
+          build-essential \
+          squashfs-tools \
+          zip \
+          libncurses-dev \
+          zlib1g-dev \
+          gcc-multilib \
+          make \
+          python3 \
+          python3-pip \
+          curl \
+          wget \
+          bc \
+          jq
+
+    - name: Initialize Repo and Sync TWRP 14.1 source
+      run: |
+        mkdir -p ~/bin
+        PATH=~/bin:$PATH
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        
+        mkdir workspace && cd workspace
+        repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
+        repo sync -j$(nproc --all)
+
+    - name: Add Malachite Device Tree to Local Manifest
+      run: |
+        cd ~/workspace
+        mkdir -p .repo/local_manifests
+        cat << 'EOF' > .repo/local_manifests/malachite.xml
+        <?xml version="1.0" encoding="UTF-8"?>
+        <manifest>
+          <project path="device/xiaomi/malachite" name="mytiantian001/android_device_xiaomi_malachite_twrp" remote="github" revision="a16" />
+        </manifest>
+        EOF
+        repo sync -j$(nproc --all)
+
+    - name: Set up build environment and compile vendorbootimage
+      run: |
+        cd ~/workspace
+        export ALLOW_MISSING_DEPENDENCIES=true
+        . build/envsetup.sh
+        lunch twrp_malachite-eng
+        mka vendorbootimage -j$(nproc --all)
+
+    - name: Upload Recovery Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: malachite-vendor-boot-twrp
+        path: ~/workspace/out/target/product/malachite/vendor_boot.img
