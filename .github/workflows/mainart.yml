@@ -96,8 +96,3 @@ jobs:
       with:
         name: malachite-vendor-boot-twrp
         path: ~/workspace/out/target/product/malachite/vendor_boot.img
-```[cite: 8, 9, 10]
-
-Update your `.github/workflows/build.yml` file with this code, commit the changes, and trigger the workflow again from the Actions tab.
-
-<FollowUp label="Want me to help you if the build finishes successfully and you're ready to flash the new image?" query="The GitHub Actions build completed successfully—how do I flash the resulting vendor_boot.img onto my phone?"/>
