@@ -9,14 +9,25 @@ jobs:
     
     steps:
     - name: Maximize build disk space
-      uses: ulysseszh/disk-space-maximizer@v1
-      with:
-        root-reserve-mb: 1024
-        swap-size-mb: 14336
-        remove-dotnet: "true"
-        remove-android: "true"
-        remove-haskell: "true"
-        remove-codeql: "true"
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get clean
+        df -h
+
+    - name: Set up large swap memory (14GB)
+      run: |
+        sudo swapoff -a
+        sudo rm -f /swapfile
+        sudo dd if=/dev/zero of=/swapfile bs=1M count=14336
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        sudo swapon --show
+        free -h
 
     - name: Set Git user info
       run: |
@@ -81,7 +92,12 @@ jobs:
         mka vendorbootimage -j$(nproc --all)
 
     - name: Upload Recovery Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: malachite-vendor-boot-twrp
         path: ~/workspace/out/target/product/malachite/vendor_boot.img
+```[cite: 8, 9, 10]
+
+Update your `.github/workflows/build.yml` file with this code, commit the changes, and trigger the workflow again from the Actions tab.
+
+<FollowUp label="Want me to help you if the build finishes successfully and you're ready to flash the new image?" query="The GitHub Actions build completed successfully—how do I flash the resulting vendor_boot.img onto my phone?"/>
